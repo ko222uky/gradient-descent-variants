@@ -1,7 +1,7 @@
 [project]
-name = "gradient-descent-variants"
+name = "gdv"
 version = "0.1.0"
-description = "Add your description here"
+description = "Python package for CSE620 Project 1"
 readme = "README.md"
 authors = [
     { name = "Kenneth O'Dell", email = "kenneth.l.odell@gmail.com" }
