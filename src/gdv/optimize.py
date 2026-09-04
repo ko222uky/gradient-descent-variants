@@ -103,3 +103,111 @@ def dumb_optimize(
     )
 
     return res
+
+
+def gradient_descent(
+        fun, 
+        x0, 
+        args=(), 
+        jac: Any | None = None,
+        hess: Any | None = None,
+        hessp: Any | None = None,
+        bounds: Any | None = None,
+        constraints: Any | None = None,
+        tol: float | None = 1e-8, # tolerance, like our epsilon that defines convergence
+        callback: Callable = None, 
+        **kwargs
+    ) -> OptimizeResult:
+    """
+    Gradient descent function, as discussed in the week 2 lecture.
+    It only needs the Jacobian (gradient) of the objective function, which is passed as `jac` to this function.
+    The Jacobian will need to be predefined as a separate function.
+
+    The `kwargs` includes the custom parameter:
+    - lr: Learning rate for the optimization algorithm.
+    - max_iter: Maximum number of iterations for the optimization algorithm.
+
+
+    Parameters:
+    - fun: The objective function to be minimized.
+    - x0: Initial guess for the parameters.
+    - args: Extra arguments passed to the objective function.
+    - jac: Jacobian (gradient) of the objective function.
+    - hess: Hessian (second derivative) of the objective function.
+    - hessp: Hessian product function.
+    - bounds: Bounds for variables (only for constrained optimization).
+    - constraints: Constraints definition (only for constrained optimization).
+    - tol: Tolerance for termination / convergence.
+    - callback: A function called after each iteration of the optimization.
+    - **kwargs: Additional keyword arguments for custom parameters.
+
+
+
+    Returns:
+    - res: An OptimizeResult object containing the optimization results.
+
+    Example usage:
+
+    ```python
+
+        custom_options = {'lr': 0.05, 'max_iter': 50_000}
+
+        result_custom = minimize(
+            fun=objective_func, 
+            x0=start_point,
+            callback=callback, # assumes you've defined your own callback function to track the optimization history          
+            method=gradient_descent, # custom function
+            options=custom_options #  <-- custom params passed here
+        )
+    ```
+
+    """
+    # SciPy bundles the options dict into kwargs.
+    # So, minimize(..., **options) ---> custom_gradient_descent(..., **kwargs)
+    #########################################
+    # Unpack kwargs to get custom parameters
+    #########################################
+
+    learning_rate = kwargs.get('lr', 0.1)
+    max_iter = kwargs.get('max_iter', 10)
+    
+    x = np.array(x0)
+    
+
+    iter_cnt = 0
+    # run a dummy loop to show the options in action
+    for iter_cnt in range(max_iter):
+
+        step_size = learning_rate * jac(x, *args)  # compute the step size using the Jacobian
+
+        xk = x - step_size  # update the current point
+        
+        # debugging output to show the optimization process
+        # print(f"Iteration {iter_cnt}: x = {x}, \
+        #     step_size = {step_size}, \
+        #     norm = {np.linalg.norm(xk - x)}"
+        # )
+
+        if np.linalg.norm(xk - x) < tol:  # convergence criterion
+            print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
+            break
+
+        if callback:
+            # traditional SciPy callback passes just the current vector `x`
+            callback(x)
+
+        x = xk # update current to new point
+
+        
+    # create the mandatory SciPy output wrapper
+    res = OptimizeResult(
+        x=x,
+        success=True,
+        status=0,
+        message=f"Custom optimization converged after {iter_cnt} iterations.",
+        fun=fun(x, *args),
+        nit=iter_cnt,
+        nfev=iter_cnt
+    )
+
+    return res
