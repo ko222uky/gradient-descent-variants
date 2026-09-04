@@ -4,7 +4,6 @@ from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from typing import Iterable
 
-
 # primary func for generating the contours + historically travelled path.
 def optim_contour(
     X: NDArray,
@@ -103,6 +102,9 @@ def optim_contour(
         label=start_label
     )
 
+
+    ax.legend()
+    
     # if a known global optimum is provided, mark it, too.
     if known_optimum is not None:
         ax.scatter(
