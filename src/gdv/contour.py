@@ -34,6 +34,12 @@ def optim_contour(
     start_zorder: int = 5,
     start_label: str = 'Start',
 
+    end_color: str = 'black',
+    end_marker: str = '*',
+    end_size: int = 150,
+    end_zorder: int = 5,
+    end_label: str = 'End',
+
     optim_color: str = 'gold',
     optim_edgecolor: str = 'black',
     optim_marker: str = '*',
@@ -100,6 +106,17 @@ def optim_contour(
         s=start_size,
         zorder=start_zorder,
         label=start_label
+    )
+
+    # mark the ending point
+    ax.scatter(
+        history[-1, 0],  # last row of our X
+        history[-1, 1],  # last row of our Y
+        color=end_color,
+        marker=end_marker,
+        s=end_size,
+        zorder=end_zorder,
+        label=end_label
     )
 
 
