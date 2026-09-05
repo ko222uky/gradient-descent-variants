@@ -43,13 +43,11 @@ convex_bowl_hess = lambda x: np.array(
     ]
 )
 
-
 ########################
 # rosenbrock function
 ########################
 #f(x, y) = (1 - x)^2 + 100 (y - x^2)^2
 rosenbrock = lambda x: (1 - x[0])**2 + 100 * (x[1] - x[0]**2)**2
-
 
 rosenbrock_jacobian = lambda x: np.array(
     [

@@ -7,25 +7,47 @@ from gdv.functions import (
 
     multimodal_nonconvex, 
     multimodal_nonconvex_jacobian,
+    multimodal_nonconvex_hess,
 
     rosenbrock,
     rosenbrock_jacobian,
+    rosenbrock_hess,
 
     convex_bowl,
-    convex_bowl_jacobian
+    convex_bowl_jacobian,
+    convex_bowl_hess
 
 )
-from gdv.optimize import gradient_descent
+from gdv.optimize import gradient_descent, newton
 
 
 def main():
 
-    # 0. define your objective function
-    objective_func = rosenbrock
-    objective_jacobian = rosenbrock_jacobian
+    ###############################################################
+    # a. define your objective function (incl. jacobian and hessian)
+    ###############################################################
+    objective_func = multimodal_nonconvex
+    objective_jacobian = multimodal_nonconvex_jacobian
+    objective_hessian = multimodal_nonconvex_hess  # Not used in this example, but can be defined if needed
+
+
+
+    ###############################################################
+    # b. define your method & params function & method
+    ###############################################################
+    my_optimization_method = newton
+    custom_options = {'max_iter': 2000}
+
+
+
+    ###############################################################
+    # c. define your method & params function & method
+    ###############################################################
+    start_point = np.array([-5.0, -5.0])
+
 
     # 1. define your starting point and initialize the history list
-    start_point = np.array([-1.5, 2.0])
+
     history = []
     history.append(start_point) 
 
@@ -37,21 +59,20 @@ def main():
         history.append(np.copy(x))
 
     # 3. get your X, Y, Z
-    X, Y = default_meshgrid(x_range=(-5, 5), y_range=(-5, 5), num_points=900)
+    X, Y = default_meshgrid(x_range=(-15, 15), y_range=(-15, 15), num_points=5000)
     Z = objective_func((X, Y))
 
-    # 4. define parameters and run optimization
-
-    custom_options = {'lr': 0.001, 'max_iter': 2000}
+    # 4. run optimization
 
     result = minimize(
         fun=objective_func, 
         jac=objective_jacobian,
+        hess=objective_hessian,
         x0=start_point, 
-        method=gradient_descent, 
+        method=my_optimization_method, 
         callback=callback,
         options=custom_options,
-        tol=1e-10 
+        tol=1e-5 
     )
 
     print("Optimization Result:")
