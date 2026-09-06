@@ -338,8 +338,9 @@ def adagrad(
     """
     Adaptive gradient implementation, 
     with correction added to avoid singularity problem.
+    This particular implementation uses only the diagonal elements of the adjusted learning rate.
 
-    Mathematically, with `lin_time=True`, this is defined as:
+    Mathematically, this is defined as:
 
         x_k+1 = x_k - α diag(εI + Gt)-½ ∇f(xk).
 
@@ -371,7 +372,7 @@ def adagrad(
 
     ```python
 
-        custom_options = {'lr': 0.05, 'epsilon': 1e-8, 'max_iter': 50_000, 'lin_time' : True}
+        custom_options = {'lr': 0.05, 'epsilon': 1e-8, 'max_iter': 5_000}
 
         result_custom = minimize(
             fun=objective_func, 
@@ -397,7 +398,10 @@ def adagrad(
     epsilon = kwargs.get('epsilon', 1e-8)  # Small constant to prevent division by zero
 
     x = np.array(x0)        
-    G = np.zeros_like(x)                     # Initialize the accumulated squared gradients
+    G = np.zeros((len(x), len(x))) # Initialize the matrix G as an NxN matrix of zeros
+
+    # print(f"G zero: {G}\n\n") # DEBUG - sanity check for dimensions
+    
 
     iter_cnt = 0
 
@@ -405,25 +409,27 @@ def adagrad(
     for iter_cnt in range(max_iter):
 
         # computer current gradient and its self-outer-product
-        jac_k = jac(x, *args) # compute the Jacobian at the current point     
+        jac_k = jac(x, *args) # compute the Jacobian at the current point 
 
-
-        G += jac_k**2 # accumulate the squared gradients
-        
-        # G = np.diag(G)
-
+        G += np.outer(jac_k, jac_k)                     # accumulate the squared gradients
         adj_lr = learning_rate / (np.sqrt(G) + epsilon) # adj lr = learning rate divided by G + correction          
-
-        step_size = adj_lr * jac_k # elementwise multiplication (hadamard)
-
-        xk = x - step_size # update the current point
+        adj_lr = np.diag(adj_lr)                        # note to self: np.diag doesn't return a matrix, but a 1d array.
         
+        # DEBUG PRINTS: sanity check
+        # print(f"adj lr: {adj_lr}")                                                 # DEBUG
+        # if iter_cnt == 1: print(adj_lr, jac_k, adj_lr @ jac_k, x - adj_lr @ jac_k) # DEBUG
+
+        # we thus have two 1d arrays, so dims match and hadamard works
+        step_size = adj_lr * jac_k  # elementwise multiplication (hadamard)
+
+        xk = x - step_size          # get next point, i.e., take our step
+
         if callback:
             callback(x)
 
-        x = xk # update current to new point
+        x = xk                      # update current to new point
 
-    print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
+    print(f"Ended after {iter_cnt + 1} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
 
     # create the mandatory SciPy output wrapper
     res = OptimizeResult(
