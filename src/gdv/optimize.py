@@ -169,7 +169,7 @@ def gradient_descent(
     #########################################
 
     learning_rate = kwargs.get('lr', 0.1)
-    max_iter = kwargs.get('max_iter', 10)
+    max_iter = kwargs.get('max_iter', 2000)
     
     x = np.array(x0)
     
@@ -273,7 +273,7 @@ def newton(
     #########################################
 
     learning_rate = kwargs.get('lr', 0.1)
-    max_iter = kwargs.get('max_iter', 10)
+    max_iter = kwargs.get('max_iter', 2000)
     
     x = np.array(x0)
     
@@ -309,6 +309,122 @@ def newton(
         x = xk1 # update current to new point
 
         
+    # create the mandatory SciPy output wrapper
+    res = OptimizeResult(
+        x=x,
+        success=True,
+        status=0,
+        message=f"Custom optimization converged after {iter_cnt} iterations.",
+        fun=fun(x, *args),
+        nit=iter_cnt,
+        nfev=iter_cnt
+    )
+
+    return res
+
+def adagrad(
+        fun, 
+        x0, 
+        args=(), 
+        jac: Any | None = None,
+        hess: Any | None = None,
+        hessp: Any | None = None,
+        bounds: Any | None = None,
+        constraints: Any | None = None,
+        # tol: float | None = 1e-8, # tolerance isn't needed for ada_grad; convergence guaranteed
+        callback: Callable = None, 
+        **kwargs
+    ) -> OptimizeResult:
+    """
+    Adaptive gradient implementation, 
+    with correction added to avoid singularity problem.
+
+    Mathematically, with `lin_time=True`, this is defined as:
+
+        x_k+1 = x_k - α diag(εI + Gt)-½ ∇f(xk).
+
+    where α is a fixed learning rate that is scaled by the adaptive gradient matrix G.
+
+    The `kwargs` includes the custom parameter:
+    - lr: Learning rate for the optimization algorithm. Default 0.1.
+    - epsilon: Small constant to prevent division by zero in the AdaGrad update. Default 1e-8.
+    - max_iter: Maximum number of iterations for the optimization algorithm. Default 2000.
+
+
+    Parameters:
+    - fun: The objective function to be minimized.
+    - x0: Initial guess for the parameters.
+    - args: Extra arguments passed to the objective function.
+    - jac: Jacobian (gradient) of the objective function.
+    - hess: Hessian (second derivative) of the objective function.
+    - hessp: Hessian product function.
+    - bounds: Bounds for variables (only for constrained optimization).
+    - constraints: Constraints definition (only for constrained optimization).
+    - callback: A function called after each iteration of the optimization.
+    - **kwargs: Additional keyword arguments for custom parameters.
+
+
+    Returns:
+    - res: An OptimizeResult object containing the optimization results.
+
+    Example usage:
+
+    ```python
+
+        custom_options = {'lr': 0.05, 'epsilon': 1e-8, 'max_iter': 50_000, 'lin_time' : True}
+
+        result_custom = minimize(
+            fun=objective_func, 
+            x0=start_point,         
+            callback=callback, # assumes you've defined your own callback function to track the optimization history
+            method=ada_grad, # custom function
+            options=custom_options #  <-- custom params passed here
+        )
+    ```
+
+    References:
+
+    * https://optimization.cbe.cornell.edu/index.php?title=AdaGrad
+
+    """
+
+    #########################################
+    # Unpack kwargs to get custom parameters
+    #########################################
+
+    learning_rate = kwargs.get('lr', 0.1)
+    max_iter = kwargs.get('max_iter', 2000)
+    epsilon = kwargs.get('epsilon', 1e-8)  # Small constant to prevent division by zero
+
+    x = np.array(x0)        
+    G = np.zeros_like(x)                     # Initialize the accumulated squared gradients
+
+    iter_cnt = 0
+
+
+    for iter_cnt in range(max_iter):
+
+        # computer current gradient and its self-outer-product
+        jac_k = jac(x, *args) # compute the Jacobian at the current point     
+
+
+        G += jac_k**2 # accumulate the squared gradients
+        
+        # G = np.diag(G)
+
+        adj_lr = learning_rate / (np.sqrt(G) + epsilon) # adj lr = learning rate divided by G + correction          
+
+        step_size = adj_lr * jac_k # elementwise multiplication (hadamard)
+
+        xk = x - step_size # update the current point
+        
+        if callback:
+            callback(x)
+
+        x = xk # update current to new point
+
+    print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
+
     # create the mandatory SciPy output wrapper
     res = OptimizeResult(
         x=x,

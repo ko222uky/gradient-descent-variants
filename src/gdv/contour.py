@@ -4,6 +4,7 @@ from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from typing import Iterable
 
+    
 # primary func for generating the contours + historically travelled path.
 def optim_contour(
     X: NDArray,

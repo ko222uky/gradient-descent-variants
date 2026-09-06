@@ -18,8 +18,7 @@ from gdv.functions import (
     convex_bowl_hess
 
 )
-from gdv.optimize import gradient_descent, newton
-
+from gdv.optimize import gradient_descent, newton, adagrad
 
 def main():
 
@@ -30,21 +29,17 @@ def main():
     objective_jacobian = multimodal_nonconvex_jacobian
     objective_hessian = multimodal_nonconvex_hess  # Not used in this example, but can be defined if needed
 
-
-
     ###############################################################
     # b. define your method & params function & method
     ###############################################################
-    my_optimization_method = newton
-    custom_options = {'max_iter': 2000}
-
+    my_optimization_method = adagrad
+    custom_options = {'max_iter': 2000, 'lr' : 0.1}
 
 
     ###############################################################
     # c. define your method & params function & method
     ###############################################################
-    start_point = np.array([-5.0, -5.0])
-
+    start_point = np.array([-9.0, -5.0])
 
     # 1. define your starting point and initialize the history list
 
@@ -72,7 +67,7 @@ def main():
         method=my_optimization_method, 
         callback=callback,
         options=custom_options,
-        tol=1e-5 
+        # tol=1e-5 
     )
 
     print("Optimization Result:")
