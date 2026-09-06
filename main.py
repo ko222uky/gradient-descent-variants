@@ -35,7 +35,6 @@ def main():
     my_optimization_method = adagrad
     custom_options = {'max_iter': 2000, 'lr' : 0.1}
 
-
     ###############################################################
     # c. define your method & params function & method
     ###############################################################
@@ -81,7 +80,8 @@ def main():
         X, Y, Z, 
         history=history, 
         start_point=start_point, 
-        #known_optimum=np.array([1.0, 1.0]), 
+        end_point=True,
+        legend=True,
         figsize=(8, 6), 
     )
     fig.savefig('figures/example.png', dpi=300)

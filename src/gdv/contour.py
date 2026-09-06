@@ -4,7 +4,10 @@ from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from typing import Iterable
 
-    
+#TODO: implement plain visualization for just the contour. Keep it as separate func.
+def func_contour():
+    pass
+
 # primary func for generating the contours + historically travelled path.
 def optim_contour(
     X: NDArray,
@@ -13,6 +16,7 @@ def optim_contour(
     start_point: NDArray,
     history: NDArray | Iterable[NDArray],
     known_optimum: NDArray = None,
+    end_point: bool = True,
     figsize: tuple[int] = (10,7),
     num_contour_levels: int = 25,
     contourf_cmap: str = 'coolwarm',
@@ -46,7 +50,9 @@ def optim_contour(
     optim_marker: str = '*',
     optim_size: int = 200,
     optim_zorder: int = 5,  
-    label_optim: str = 'Optimum'
+    label_optim: str = 'Optimum',
+
+    legend: bool = True
 
     ) -> Figure:
     """
@@ -82,7 +88,7 @@ def optim_contour(
         linewidths=contour_linewidths
     )
 
-    # cast the history to a numpy array if it is an iterable, for easy slicing and plotting
+
     if isinstance(history, Iterable):
         history = np.array(history)
 
@@ -98,6 +104,8 @@ def optim_contour(
         label=path_label
     )
 
+
+
     # mark the starting point of the optimization path
     ax.scatter(
         start_point[0],
@@ -109,19 +117,24 @@ def optim_contour(
         label=start_label
     )
 
-    # mark the ending point
-    ax.scatter(
-        history[-1, 0],  # last row of our X
-        history[-1, 1],  # last row of our Y
-        color=end_color,
-        marker=end_marker,
-        s=end_size,
-        zorder=end_zorder,
-        label=end_label
-    )
+    if end_point:
+        # mark the ending point
+        if isinstance(history, Iterable):
+            history = np.array(history)
 
 
-    ax.legend()
+        ax.scatter(
+            history[-1, 0],  # last row of our X
+            history[-1, 1],  # last row of our Y
+            color=end_color,
+            marker=end_marker,
+            s=end_size,
+            zorder=end_zorder,
+            label=end_label
+        )
+
+    if legend:
+        ax.legend()
     
     # if a known global optimum is provided, mark it, too.
     if known_optimum is not None:

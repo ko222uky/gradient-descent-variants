@@ -443,3 +443,7 @@ def adagrad(
     )
 
     return res
+
+# TODO; implement adam
+def adam():
+    pass
