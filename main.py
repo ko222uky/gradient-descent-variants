@@ -1,3 +1,37 @@
+"""
+This main script is for testing the functionality of the package implementations.
+
+For the Project 1 CSE620 deliverables, the following must be performed:
+
+What to Implement / Do:
+A. Implement or use library versions of the four optimizers (NumPy, PyTorch, JAX, etc.).
+
+B. For each function, pick 2–3 different initial points (e.g., (-2, 2), (0.5, -1.5), (3, 3)).
+
+C. For each optimizer, try at least 3 step sizes (also called learning rates) e.g., 0.001, 0.01, 0.1. Tune
+Newton’s with damping (damping means decreasing rate gradually with each iteration) if needed.
+
+D. Run until convergence, i.e., ||x_(k+1) - x_k|| < 1e-6. (However, you may need to limit the number of
+iterations to say, 2000 in case of either very slow convergence or oscillation)
+
+E. Visualize the process by drawing contour plots and overlaying the optimization path.
+
+F. Record the number of iterations to converge, final point, and the final f value.
+
+G. Analyze your results by discussing the convergence behavior across functions and
+hyperparameters. Identify when and why methods differ.
+
+Expected Phenomena to Observe:
+● f1 (quadratic): Newton converges in one step from generic starts; GD converges smoothly if α
+is reasonable; AdaGrad/Adam also converge quickly.
+
+● f2 (Rosenbrock): GD often “zigzags” or diverges unless α is very small; AdaGrad may slow
+down; Adam typically works well with moderate α.
+
+● f3 (cosine bumps): Multiple local minima; different methods and α may land in different basins;
+Adam’s momentum may escape shallow minima better than plain GD/AdaGrad
+
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
@@ -18,7 +52,12 @@ from gdv.functions import (
     convex_bowl_hess
 
 )
-from gdv.optimize import gradient_descent, newton, adagrad
+from gdv.optimize import (
+    gradient_descent,
+    newton,
+    adagrad,
+    adam
+)
 
 def main():
 
@@ -32,13 +71,13 @@ def main():
     ###############################################################
     # b. define your method & params function & method
     ###############################################################
-    my_optimization_method = adagrad
-    custom_options = {'max_iter': 2000, 'lr' : 0.1}
+    my_optimization_method = newton
+    custom_options = {'max_iter': 2000, 'lr' : 0.1, 'decay_rate' : 0.000001}
 
     ###############################################################
     # c. define your method & params function & method
     ###############################################################
-    start_point = np.array([-9.0, -5.0])
+    start_point = np.array([-9.0, -11.0])
 
     # 1. define your starting point and initialize the history list
 
@@ -66,7 +105,7 @@ def main():
         method=my_optimization_method, 
         callback=callback,
         options=custom_options,
-        # tol=1e-5 
+        tol=1e-5 
     )
 
     print("Optimization Result:")

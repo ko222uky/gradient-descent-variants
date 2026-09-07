@@ -104,7 +104,6 @@ def dumb_optimize(
 
     return res
 
-
 def gradient_descent(
         fun, 
         x0, 
@@ -206,7 +205,7 @@ def gradient_descent(
         status=0,
         message=f"Custom optimization converged after {iter_cnt} iterations.",
         fun=fun(x, *args),
-        nit=iter_cnt,
+        nit=iter_cnt+1,
         nfev=iter_cnt
     )
 
@@ -221,7 +220,7 @@ def newton(
         hessp: Any | None = None,
         bounds: Any | None = None,
         constraints: Any | None = None,
-        tol: float | None = 1e-8, # tolerance, like our epsilon that defines convergence
+        tol: float | None = 1e-6, # tolerance, like our epsilon that defines convergence
         callback: Callable = None, 
         **kwargs
     ) -> OptimizeResult:
@@ -230,8 +229,8 @@ def newton(
 
     The `kwargs` includes the custom parameter:
     - max_iter: Maximum number of iterations for the optimization algorithm.
-
-
+    - decay_rate: Deterministic decay rate that is linear. Default is 0.1.
+    
     Parameters:
     - fun: The objective function to be minimized.
     - x0: Initial guess for the parameters.
@@ -272,13 +271,23 @@ def newton(
     # Unpack kwargs to get custom parameters
     #########################################
 
-    learning_rate = kwargs.get('lr', 0.1)
+    learning_rate = kwargs.get('lr', 1.0)
     max_iter = kwargs.get('max_iter', 2000)
-    
+    decay_rate = kwargs.get('decay_rate', 0.1)
+
+    ############################
+    # initializations
+    ############################
+
     x = np.array(x0)
-    
 
     iter_cnt = 0
+
+    decay = 1
+
+    inverse_time_decay = learning_rate
+
+
     # run a dummy loop to show the options in action
     for iter_cnt in range(max_iter):
 
@@ -293,22 +302,24 @@ def newton(
             print(f"Hessian is not invertible at iteration {iter_cnt}. Stopping optimization.")
             break
 
+        
+        inverse_time_decay /= decay
+
         # definition of step size t; not fixed.
         step_size = hess_inv_k @ jac_k  
 
-        xk1 = x - step_size  # update the current point
+        xk = x - inverse_time_decay*step_size  # update the current point
         
-        if np.linalg.norm(xk1 - x) < tol:  # convergence criterion
-            print(f"Converged after {iter_cnt} iterations:\nxk = {xk1}\nx = {x}\nnorm = {np.linalg.norm(xk1 - x)}\ntol = {tol}\n")
+        if np.linalg.norm(xk - x) < tol:  # convergence criterion
+            print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
             break
-
+        
         if callback:
-            # traditional SciPy callback passes just the current vector `x`
             callback(x)
 
-        x = xk1 # update current to new point
+        x = xk
+        decay += decay_rate
 
-        
     # create the mandatory SciPy output wrapper
     res = OptimizeResult(
         x=x,
@@ -316,7 +327,139 @@ def newton(
         status=0,
         message=f"Custom optimization converged after {iter_cnt} iterations.",
         fun=fun(x, *args),
-        nit=iter_cnt,
+        nit=iter_cnt+1,
+        nfev=iter_cnt
+    )
+
+    return res
+
+def adam(
+        fun, 
+        x0, 
+        args=(),
+        jac: Any | None = None,
+        hess: Any | None = None,
+        hessp: Any | None = None,
+        bounds: Any | None = None,
+        constraints: Any | None = None,
+        tol: float | None = 1e-8, # tolerance isn't needed for ada_grad; convergence guaranteed
+        callback: Callable = None, 
+        **kwargs
+    ) -> OptimizeResult:
+    """
+    Adaptive Moment Estimation (ADAM) combines RMSprop and momentum.
+    Momentum keeps an exponentially decaying average of gradients, whereas
+    RMSprop keeps an exponentially decaying average of squared gradients.
+
+    Mathematically, this is defined as:
+
+        mk+1 = β1mk + (1-β1)∇f(xk) (momentum ~ mean)
+        vk+1 = β2vk + (1-β2)∇f(xk)2 (RMSprop ~ variance)
+        m̂k = mk / (1- β1k) (bias correction since m0, v0 = 0)
+        v̂k = vk / (1 - β2k)
+        xk = xk-1 - αm̂k / (√v̂k + ε) 
+
+    The `kwargs` includes the custom parameter:
+
+    - lr: Learning rate for the optimization algorithm. Default 0.01.
+    - epsilon: Small constant to prevent division by zero in the AdaGrad update. Default 1e-8.
+    - max_iter: Maximum number of iterations for the optimization algorithm. Default 2000.
+    - beta1: Scaling factor for momentum. Default 0.9.
+    - beta2: Scaling factor for RMSprop. Default 0.999.
+
+    Parameters:
+    - fun: The objective function to be minimized.
+    - x0: Initial guess for the parameters.
+    - args: Extra arguments passed to the objective function.
+    - jac: Jacobian (gradient) of the objective function.
+    - hess: Hessian (second derivative) of the objective function.
+    - hessp: Hessian product function.
+    - bounds: Bounds for variables (only for constrained optimization).
+    - constraints: Constraints definition (only for constrained optimization).
+    - callback: A function called after each iteration of the optimization.
+    - **kwargs: Additional keyword arguments for custom parameters.
+
+
+    Returns:
+    - res: An OptimizeResult object containing the optimization results.
+
+    Example usage:
+
+    ```python
+
+        custom_options = {'lr': 0.05, 'epsilon': 1e-8, 'max_iter': 5_000}
+
+        result_custom = minimize(
+            fun=objective_func, 
+            x0=start_point,         
+            callback=callback, # assumes you've defined your own callback function to track the optimization history
+            method=ada_grad, # custom function
+            options=custom_options #  <-- custom params passed here
+        )
+    ```
+
+    """
+
+    #########################################
+    # Unpack kwargs to get custom parameters
+    #########################################
+
+    learning_rate = kwargs.get('lr', 0.01)
+    max_iter = kwargs.get('max_iter', 2000)
+    epsilon = kwargs.get('epsilon', 1e-8)  # Small constant to prevent division by zero
+    beta1 = kwargs.get('beta1', 0.9)
+    beta2 = kwargs.get('beta2', 0.999)
+
+    ###################
+    # Initializations
+    ###################
+    x = np.array(x0)    
+
+    m = np.zeros(len(x)) # Initialize the momentum vector where m0 := 0
+    v = np.zeros(len(x)) # initialize moment vector where v0 := 0
+
+    iter_cnt = 0
+
+    ###################
+    # Main alg loop
+    ###################
+
+    for iter_cnt in range(max_iter):
+        # computer current gradient and its self-outer-product
+        jac_k = jac(x, *args) # compute the Jacobian at the current point 
+
+        # update our momentum and rms prop (i.e., ~ mean & ~ variance)
+        m = (beta1 * m) + (1 - beta1) * jac_k     # update momentum
+        v = (beta2 * v) + (1 - beta2) * jac_k**2   # update RMSprop; use element-wise squaring
+        
+        # scaling factors are to the power of t, which is
+        # based on the iter count. It starts at t := 1, so add 1.
+        m_hat = m / (1 - beta1**(iter_cnt + 1))
+        v_hat = v / (1 - beta2**(iter_cnt + 1))
+
+        step_size = learning_rate * m_hat / (np.sqrt(v_hat) + epsilon) 
+
+        xk = x - step_size          # get next point, i.e., take our step
+
+        if np.linalg.norm(xk - x) < tol:  # convergence criterion
+            print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
+            break
+        
+        if callback:
+            callback(x)
+
+        x = xk
+
+        print(f"Ended after {iter_cnt + 1} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
+
+    # create the mandatory SciPy output wrapper
+    res = OptimizeResult(
+        x=x,
+        success=True,
+        status=0,
+        message=f"Custom optimization converged after {iter_cnt} iterations.",
+        fun=fun(x, *args),
+        nit=iter_cnt+1,
         nfev=iter_cnt
     )
 
@@ -331,7 +474,7 @@ def adagrad(
         hessp: Any | None = None,
         bounds: Any | None = None,
         constraints: Any | None = None,
-        # tol: float | None = 1e-8, # tolerance isn't needed for ada_grad; convergence guaranteed
+        tol: float | None = 1e-8, 
         callback: Callable = None, 
         **kwargs
     ) -> OptimizeResult:
@@ -424,10 +567,14 @@ def adagrad(
 
         xk = x - step_size          # get next point, i.e., take our step
 
+        if np.linalg.norm(xk - x) < tol:  # convergence criterion
+            print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
+            break
+        
         if callback:
             callback(x)
 
-        x = xk                      # update current to new point
+        x = xk
 
     print(f"Ended after {iter_cnt + 1} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
 
@@ -438,12 +585,9 @@ def adagrad(
         status=0,
         message=f"Custom optimization converged after {iter_cnt} iterations.",
         fun=fun(x, *args),
-        nit=iter_cnt,
+        nit=iter_cnt+1,
         nfev=iter_cnt
     )
 
     return res
 
-# TODO; implement adam
-def adam():
-    pass
