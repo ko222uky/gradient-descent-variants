@@ -4,7 +4,57 @@ from matplotlib.figure import Figure
 from numpy.typing import NDArray
 from typing import Iterable
 
-    
+# plotting func for the objective function only.
+def func_contour(
+    X: NDArray,
+    Y: NDArray,
+    Z: NDArray,
+
+    figsize: tuple[int] = (10,7),
+    num_contour_levels: int = 25,
+    contourf_cmap: str = 'coolwarm',
+    contourf_alpha: float = 0.7,
+    contourf_label: str = 'Objective Value (Z)',
+
+    contour_colors: str = 'black',
+    contour_linewidths: float = 0.5,
+
+    legend: bool = True
+
+    ) -> Figure:
+    """
+    Creates a contour plot from a discrete grid of the search space.
+
+    Requires an X, Y, Z 1D-array input where X,Y denote the coordinates in the search space,
+    and Z is the objective function evaluated at (X, Y).
+    """
+    # instantiate a new figure for the contour plot
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # creates the color fill for contour levels
+    contour_filled = ax.contourf(
+        X, Y, Z, 
+        cmap=contourf_cmap,  
+        alpha=contourf_alpha,
+        levels=num_contour_levels
+    )
+
+    # adds a colorbar to the contour plot with a label
+    fig.colorbar(contour_filled, label=contourf_label)
+
+    # draws countour level boundaries on top of the filled contours
+    ax.contour(
+        X, Y, Z,
+        levels=num_contour_levels,
+        colors=contour_colors,
+        linewidths=contour_linewidths
+    )
+
+    if legend:
+        ax.legend()
+
+    return fig
+
 # primary func for generating the contours + historically travelled path.
 def optim_contour(
     X: NDArray,
@@ -13,6 +63,7 @@ def optim_contour(
     start_point: NDArray,
     history: NDArray | Iterable[NDArray],
     known_optimum: NDArray = None,
+    end_point: bool = True,
     figsize: tuple[int] = (10,7),
     num_contour_levels: int = 25,
     contourf_cmap: str = 'coolwarm',
@@ -46,7 +97,9 @@ def optim_contour(
     optim_marker: str = '*',
     optim_size: int = 200,
     optim_zorder: int = 5,  
-    label_optim: str = 'Optimum'
+    label_optim: str = 'Optimum',
+
+    legend: bool = True
 
     ) -> Figure:
     """
@@ -82,7 +135,7 @@ def optim_contour(
         linewidths=contour_linewidths
     )
 
-    # cast the history to a numpy array if it is an iterable, for easy slicing and plotting
+
     if isinstance(history, Iterable):
         history = np.array(history)
 
@@ -98,6 +151,8 @@ def optim_contour(
         label=path_label
     )
 
+
+
     # mark the starting point of the optimization path
     ax.scatter(
         start_point[0],
@@ -109,19 +164,24 @@ def optim_contour(
         label=start_label
     )
 
-    # mark the ending point
-    ax.scatter(
-        history[-1, 0],  # last row of our X
-        history[-1, 1],  # last row of our Y
-        color=end_color,
-        marker=end_marker,
-        s=end_size,
-        zorder=end_zorder,
-        label=end_label
-    )
+    if end_point:
+        # mark the ending point
+        if isinstance(history, Iterable):
+            history = np.array(history)
 
 
-    ax.legend()
+        ax.scatter(
+            history[-1, 0],  # last row of our X
+            history[-1, 1],  # last row of our Y
+            color=end_color,
+            marker=end_marker,
+            s=end_size,
+            zorder=end_zorder,
+            label=end_label
+        )
+
+    if legend:
+        ax.legend()
     
     # if a known global optimum is provided, mark it, too.
     if known_optimum is not None:
