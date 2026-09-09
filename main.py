@@ -70,7 +70,11 @@ def main():
     # define your method & params function & method
     ###############################################################
 
-    method = "newton"
+    # method = "gradient_descent"
+    # method = "newton"
+    method = "adagrad"
+    # method = "adam"
+
 
     func_dict = {
         "gradient_descent" : gradient_descent,
@@ -82,14 +86,17 @@ def main():
     my_optimization_method = func_dict[method]
 
     custom_options_set = [
-        {'max_iter': 2000, 'decay_rate' : 0.000001},
-        {'max_iter': 2000, 'decay_rate' : 0.00001},
-        {'max_iter': 2000, 'decay_rate' : 0.0},
+        # {'max_iter': 5000, 'decay_rate' : 0.000001},
+        # {'max_iter': 5000, 'decay_rate' : 0.00001},
+        # {'max_iter': 5000, 'decay_rate' : 0.0},
+
+        {'max_iter': 5000, 'lr' : 0.001},
+        {'max_iter': 5000, 'lr' : 0.01},
+        {'max_iter': 5000, 'lr' : 0.1},
     ]
 
     start_points = [
-        np.array([-7.0, -7.0]),
-        np.array([3, 4]),
+        np.array([-7.0, -4.0]),
         np.array([10, 10])
     ]
 
