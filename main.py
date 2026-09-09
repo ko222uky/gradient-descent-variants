@@ -89,7 +89,7 @@ def main():
 
     start_points = [
         np.array([-7.0, -7.0]),
-        np.array([1, 2]),
+        np.array([3, 4]),
         np.array([10, 10])
     ]
 
