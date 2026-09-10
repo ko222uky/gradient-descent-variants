@@ -32,6 +32,8 @@ down; Adam typically works well with moderate α.
 Adam’s momentum may escape shallow minima better than plain GD/AdaGrad
 
 """
+import gc
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
@@ -58,73 +60,141 @@ from gdv.optimize import (
     adagrad,
     adam
 )
+import polars as pl
 
 def main():
 
-    ###############################################################
-    # a. define your objective function (incl. jacobian and hessian)
-    ###############################################################
-    objective_func = multimodal_nonconvex
-    objective_jacobian = multimodal_nonconvex_jacobian
-    objective_hessian = multimodal_nonconvex_hess  # Not used in this example, but can be defined if needed
+    df_data = []
 
     ###############################################################
-    # b. define your method & params function & method
+    # define your method & params function & method
     ###############################################################
-    my_optimization_method = newton
-    custom_options = {'max_iter': 2000, 'lr' : 0.1, 'decay_rate' : 0.000001}
 
-    ###############################################################
-    # c. define your method & params function & method
-    ###############################################################
-    start_point = np.array([-9.0, -11.0])
+    # method = "gradient_descent"
+    # method = "newton"
+    method = "adagrad"
+    # method = "adam"
 
-    # 1. define your starting point and initialize the history list
 
-    history = []
-    history.append(start_point) 
+    func_dict = {
+        "gradient_descent" : gradient_descent,
+        "newton" : newton,
+        "adagrad" : adagrad,
+        "adam" : adam
+    }
 
-    # 2. define callback
-    def callback(x):
-        """
-        Callback function to log the optimizer's history at each step
-        """
-        history.append(np.copy(x))
+    my_optimization_method = func_dict[method]
 
-    # 3. get your X, Y, Z
-    X, Y = default_meshgrid(x_range=(-15, 15), y_range=(-15, 15), num_points=5000)
-    Z = objective_func((X, Y))
+    custom_options_set = [
+        # {'max_iter': 5000, 'decay_rate' : 0.000001},
+        # {'max_iter': 5000, 'decay_rate' : 0.00001},
+        # {'max_iter': 5000, 'decay_rate' : 0.0},
 
-    # 4. run optimization
+        {'max_iter': 5000, 'lr' : 0.001},
+        {'max_iter': 5000, 'lr' : 0.01},
+        {'max_iter': 5000, 'lr' : 0.1},
+    ]
 
-    result = minimize(
-        fun=objective_func, 
-        jac=objective_jacobian,
-        hess=objective_hessian,
-        x0=start_point, 
-        method=my_optimization_method, 
-        callback=callback,
-        options=custom_options,
-        tol=1e-5 
-    )
+    start_points = [
+        np.array([-7.0, -4.0]),
+        np.array([10, 10])
+    ]
 
-    print("Optimization Result:")
-    print(f"Final point: {result.x}")
-    print(f"Function value at final point: {result.fun}")
-    print(f"Number of iterations: {result.nit}")
     
+    ###############################################################
+    # define your objective function (incl. jacobian and hessian)
+    ###############################################################
+    obj_func_dict = {
+        "nonconvex": (multimodal_nonconvex, multimodal_nonconvex_jacobian, multimodal_nonconvex_hess),
+        "rosenbrock":(rosenbrock, rosenbrock_jacobian, rosenbrock_hess),
+        "convex_bowl": (convex_bowl, convex_bowl_jacobian, convex_bowl_hess) 
+    }
 
-    # 5. visualize the optimization path on the contour plot
-    fig = optim_contour(
-        X, Y, Z, 
-        history=history, 
-        start_point=start_point, 
-        end_point=True,
-        legend=True,
-        figsize=(8, 6), 
-    )
-    fig.savefig('figures/example.png', dpi=300)
-    # plt.show()
+    obj_funcs = ['nonconvex', 'rosenbrock', 'convex_bowl']
+
+
+    for obj_func in obj_funcs:
+
+        objective_func = obj_func_dict[obj_func][0]
+        objective_jacobian = obj_func_dict[obj_func][1]
+        objective_hessian = obj_func_dict[obj_func][2]  # Not used in this example, but can be defined if needed
+
+        # 1. define your starting point and initialize the history list
+        for custom_options in custom_options_set:
+            for start_point in start_points:
+
+                data_row = {}
+
+                # add obj func name
+                data_row |= {"Objective Function" : obj_func}
+
+
+                # add start point
+                data_row |= {
+                    'Start X' : float(start_point[0]),
+                    'Start Y' : float(start_point[1])
+                }
+                data_row |= custom_options
+
+                history = []
+                history.append(start_point) 
+
+                # 2. define callback
+                def callback(x):
+                    """
+                    Callback function to log the optimizer's history at each step
+                    """
+                    history.append(np.copy(x))
+
+                # 3. get your X, Y, Z
+                X, Y = default_meshgrid(x_range=(-15, 15), y_range=(-15, 15), num_points=5000)
+                Z = objective_func((X, Y))
+
+                # 4. run optimization
+
+                result = minimize(
+                    fun=objective_func, 
+                    jac=objective_jacobian,
+                    hess=objective_hessian,
+                    x0=start_point, 
+                    method=my_optimization_method, 
+                    callback=callback,
+                    options=custom_options,
+                    tol=1e-6 
+                )
+                data_row |= result
+
+                print("Optimization Result:")
+                print(f"Final point: {result.x}")
+                print(f"Function value at final point: {result.fun}")
+                print(f"Number of iterations: {result.nit}")
+
+                # 5. visualize the optimization path on the contour plot
+                fig = optim_contour(
+                    X, Y, Z, 
+                    history=history, 
+                    start_point=start_point, 
+                    end_point=True,
+                    legend=True,
+                    figsize=(8, 6), 
+                )
+
+                fig.savefig(Path(f'figures/{method}/{obj_func}_{custom_options}_{start_point}.png'), dpi=300)
+
+                # recast and format some of the results so it can be written to CSV...
+                data_row['fun'] = float(data_row['fun'])
+                data_row['x'] = str(data_row['x'][0]) + ', ' + str(data_row['x'][1])
+
+                print(data_row)
+
+                df_data.append(data_row)
+
+                gc.collect()
+                plt.close(fig)  # close the figure after saving, else memory leak
+
+    df = pl.DataFrame(data=df_data)
+    print(df)
+    df.write_csv(Path(f'figures/{method}/data.csv'))
 
 if __name__ == '__main__':
     main()

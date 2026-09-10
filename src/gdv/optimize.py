@@ -450,7 +450,7 @@ def adam(
 
         x = xk
 
-        print(f"Ended after {iter_cnt + 1} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
+    print(f"Ended after {iter_cnt + 1} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
 
     # create the mandatory SciPy output wrapper
     res = OptimizeResult(
