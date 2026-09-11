@@ -310,7 +310,7 @@ def newton(
         xk = x - inverse_time_decay*step_size  # update the current point
         
         if np.linalg.norm(xk - x) < tol:  # convergence criterion
-            print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
+            #print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
             break
         
         if callback:
@@ -449,7 +449,7 @@ def adam(
 
         x = xk
 
-    print(f"Ended after {iter_cnt + 1} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
+    # print(f"Ended after {iter_cnt + 1} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}") 
 
     # create the mandatory SciPy output wrapper
     res = OptimizeResult(
@@ -567,7 +567,7 @@ def adagrad(
         xk = x - step_size          # get next point, i.e., take our step
 
         if np.linalg.norm(xk - x) < tol:  # convergence criterion
-            print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
+            # print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
             break
         
         if callback:

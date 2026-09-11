@@ -37,9 +37,15 @@ from gdv.optimize import (
 import polars as pl
 from time import perf_counter
 
+
+
 def main():
 
-    df_data = []
+    def callback(x):
+        """
+        Callback function to log the optimizer's history at each step
+        """
+        history.append(np.copy(x)) 
 
     N = 100; # to get runtime averages
 
@@ -56,6 +62,9 @@ def main():
     }
 
     for method in methods:
+
+        df_data = []
+
         print(f"RUNNING METHOD: {method}")
         my_optimization_method = func_dict[method]
 
@@ -63,17 +72,16 @@ def main():
             {'max_iter': 5000, 'lr' : 0.001},
             {'max_iter': 5000, 'lr' : 0.01},
             {'max_iter': 5000, 'lr' : 0.1},
-        ] if method != "newton" else [{'max_iter': 5000, 'decay_rate' : 0.000001},
+        ] if method != "newton" else [
+            {'max_iter': 5000, 'decay_rate' : 0.000001},
             {'max_iter': 5000, 'decay_rate' : 0.00001},
             {'max_iter': 5000, 'decay_rate' : 0.0}]
-
 
         start_points = [
             np.array([-7.0, -4.0]),
             np.array([10, 10]),
             np.array([1, -1])
         ]
-
         
         ###############################################################
         # define your objective function (incl. jacobian and hessian)
@@ -110,15 +118,7 @@ def main():
                     }
                     data_row |= custom_options
 
-                    history = []
-                    history.append(start_point) 
 
-                    # 2. define callback
-                    def callback(x):
-                        """
-                        Callback function to log the optimizer's history at each step
-                        """
-                        history.append(np.copy(x))
 
                     # 3. get your X, Y, Z
                     X, Y = default_meshgrid(x_range=(-15, 15), y_range=(-15, 15), num_points=5000)
@@ -131,8 +131,16 @@ def main():
                     runtimes = []
                     result = {}
 
+          
+
                     print(f"Performing {N} runs to get runtime stats.")
                     for _ in range(N):
+
+                        history = []
+                        history.append(start_point) 
+
+                        # define callback
+
                         start = perf_counter()
                         result = minimize(
                             fun=objective_func, 
