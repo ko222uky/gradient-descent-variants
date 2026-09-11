@@ -188,7 +188,7 @@ def gradient_descent(
         # )
 
         if np.linalg.norm(xk - x) < tol:  # convergence criterion
-            print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
+            # print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n") # DEBUG
             break
 
         if callback:
@@ -197,7 +197,6 @@ def gradient_descent(
 
         x = xk # update current to new point
 
-        
     # create the mandatory SciPy output wrapper
     res = OptimizeResult(
         x=x,
