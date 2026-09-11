@@ -16,4 +16,4 @@ To run, use:
 uv run main.py
 ```
 
-Edit the `main.py` to configure the methods and parameters used.
+Edit `main.py` if you wish to change any experiment hyperparameters.
