@@ -305,16 +305,19 @@ def newton(
         inverse_time_decay /= decay
 
         # definition of step size t; not fixed.
-        step_size = hess_inv_k @ jac_k  
+        step_size = hess_inv_k @ jac_k
 
         xk = x - inverse_time_decay*step_size  # update the current point
-        
+
+        if callback:
+            # log the new point (xk), not the stale x, so the final
+            # converged point is always captured in the history.
+            callback(xk)
+
         if np.linalg.norm(xk - x) < tol:  # convergence criterion
             #print(f"Converged after {iter_cnt} iterations:\nxk = {xk}\nx = {x}\nnorm = {np.linalg.norm(xk - x)}\ntol = {tol}\n")
+            x = xk
             break
-        
-        if callback:
-            callback(x)
 
         x = xk
         decay += decay_rate
