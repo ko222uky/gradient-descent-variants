@@ -17,3 +17,7 @@ uv run main.py
 ```
 
 Edit `main.py` if you wish to change any experiment hyperparameters.
+
+## Output helpers
+
+The helper scripts in the `figures/` directory are for cleaning / preparing the output. These scripts can also be ran using `uv`.
